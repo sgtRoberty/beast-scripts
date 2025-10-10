@@ -1,11 +1,26 @@
 #!/bin/bash
+# --------------------------------------------------------------------------------------------------
+# SCRIPT:      make_beastMCMC_run_replicates.sh
+# AUTHOR:      Robert Haobo Yuan
+# DATE:        2025-10-10
+#
+# DESCRIPTION:
+# This script makes replicate folders for BEAST2 runs based on an existing XML and SH file in the current directory.
+# It copies and renames the XML and SH files into each replicate folder, adjusting the job name and XML filename in the SH file accordingly.
+# The user should adjust the submission details (time, memory, etc.) in the SLURM submission script as needed before running this script.
+# Ensure that only one .xml and one submit*.sh file are present in the directory.
+#
+# USAGE:
+# ./make_beastMCMC_run_replicates.sh <number_of_replicates> [starting_run_number]
+#
+# --------------------------------------------------------------------------------------------------
 
-# Check for exactly one .xml and one .sh file in the current directory
+# Check for exactly one .xml and one submit*.sh file in the current directory
 xml_files=( *.xml )
-sh_files=( *.sh )
+sh_files=( submit*.sh )
 
 if [[ ${#xml_files[@]} -ne 1 || ${#sh_files[@]} -ne 1 ]]; then
-  echo "Error: Make sure there is exactly one .xml file and one .sh file in the current directory."
+  echo "Error: Make sure there is exactly one .xml file and one submit*.sh file in the current directory."
   exit 1
 fi
 

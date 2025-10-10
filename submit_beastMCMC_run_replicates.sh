@@ -1,4 +1,17 @@
 #!/bin/bash
+# --------------------------------------------------------------------------------------------------
+# SCRIPT:      submit_beastMCMC_run_replicates.sh
+# AUTHOR:      Robert Haobo Yuan
+# DATE:        2025-10-10
+#
+# DESCRIPTION:
+# This script submits SLURM jobs for BEAST2 runs located in replicate folders created by make_beastMCMC_run_replicates.sh.
+# It allows users to specify which runs to submit using the --run argument.
+#
+# USAGE:
+# ./submit_beastMCMC_run_replicates.sh [--run N|N-N,N,...|all]
+#
+# --------------------------------------------------------------------------------------------------
 
 # Default run argument
 run_arg="all"
@@ -87,7 +100,7 @@ for folder in "${folders[@]}"; do
         fi
 
         if $submit; then
-            sh_file=$(find "$folder" -maxdepth 1 -name "*.sh" | head -n 1)
+            sh_file=$(find "$folder" -maxdepth 1 -name "submit*.sh" | head -n 1)
             if [[ -f "$sh_file" ]]; then
                 echo "→ Submitting $(basename "$sh_file") from $folder"
                 (cd "$folder" && sbatch "$(basename "$sh_file")")

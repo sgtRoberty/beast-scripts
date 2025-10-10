@@ -1,4 +1,16 @@
 #!/bin/bash
+# --------------------------------------------------------------------------------------------------
+# SCRIPT:      summarize_beastMCMC.sh
+# AUTHOR:      Robert Haobo Yuan
+# DATE:        2025-10-10
+#
+# DESCRIPTION:
+# This script summarizes and combines BEAST2 MCMC outputs from multiple replicate runs.
+#
+# USAGE:
+# ./summarize_beastMCMC.sh --burnin <value> [--resample <freq>] [--runs <ranges>]
+#
+# --------------------------------------------------------------------------------------------------
 
 # ----------------------------
 # Argument parsing

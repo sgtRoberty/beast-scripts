@@ -1,4 +1,17 @@
 #!/bin/bash
+# --------------------------------------------------------------------------------------------------
+# SCRIPT:      submit_pathsampling_resume_jobs.sh
+# AUTHOR:      Robert Haobo Yuan
+# DATE:        2025-10-10
+#
+# DESCRIPTION:
+# This script submits SLURM jobs to resume BEAST2 path sampling/stepping-stone sampling runs from existing submit scripts.
+# It allows filtering by run and step numbers.
+#
+# USAGE:
+# ./submit_pathsampling_resume_jobs.sh [--run N|N-N,N,...|all] [--step N|N-N,N,...|all]
+#
+# --------------------------------------------------------------------------------------------------
 
 # Defaults
 run_arg="all"

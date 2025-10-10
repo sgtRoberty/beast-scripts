@@ -1,4 +1,17 @@
 #!/bin/bash
+# --------------------------------------------------------------------------------------------------
+# SCRIPT:      make_pathsampling_resume_submit_scripts.sh
+# AUTHOR:      Robert Haobo Yuan
+# DATE:        2025-10-10
+#
+# DESCRIPTION:
+# This script makes SLURM submission scripts to resume BEAST2 path sampling/stepping-stone sampling runs from existing resume.sh scripts.
+# It allows filtering by run and step numbers, and can optionally overwrite existing submit scripts.
+#
+# USAGE:
+# ./make_pathsampling_resume_submit_scripts.sh [--run N|N-N,N,...|all] [--step N|N-N,N,...|all] [-overwrite]
+#
+# --------------------------------------------------------------------------------------------------
 
 # --------------------------------------
 # Defaults
