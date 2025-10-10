@@ -26,6 +26,7 @@ fi
 xml_file="${xml_files[0]}"
 base_name="${xml_file%.xml}"
 submit_script="submit-${base_name}.sh"
+resume_script="resume-submit-${base_name}.sh"
 
 # Write the submit script
 cat > "$submit_script" <<EOF
@@ -39,7 +40,8 @@ cat > "$submit_script" <<EOF
 ~/BEAST2/beast/bin/beast -threads 1 ${base_name}.xml
 EOF
 
-resume_script="resume-submit-${base_name}.sh"
+echo "Submit script created: $submit_script"
+
 # Write the resume script
 cat > "$resume_script" <<EOF
 #!/bin/bash
