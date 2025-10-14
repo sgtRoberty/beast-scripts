@@ -1,17 +1,17 @@
 #!/bin/bash
 # --------------------------------------------------------------------------------------------------
-# SCRIPT:      make_beastMCMC_run_replicates.sh
+# SCRIPT:      make_beastMCMC_jobs.sh
 # AUTHOR:      Robert Haobo Yuan
-# DATE:        2025-10-10
+# DATE:        2025-10-14
 #
 # DESCRIPTION:
-# This script makes replicate folders for BEAST2 runs based on an existing XML and SH file in the current directory.
+# This script makes replicate folders for a BEAST2 MCMC analysis based on an existing XML file and SLURM submission (SH) script in the current directory.
 # It copies and renames the XML and SH files into each replicate folder, adjusting the job name and XML filename in the SH file accordingly.
 # The user should adjust the submission details (time, memory, etc.) in the SLURM submission script as needed before running this script.
 # Ensure that only one .xml and one submit*.sh file are present in the directory.
 #
 # USAGE:
-# ./make_beastMCMC_run_replicates.sh <number_of_replicates> [starting_run_number]
+# ./make_beastMCMC_jobs.sh <number_of_replicates> [starting_run_number]
 #
 # --------------------------------------------------------------------------------------------------
 
@@ -86,12 +86,19 @@ for (( i = 0; i < replicate_count; i++ )); do
   new_xml_name="${base_name}-run${current_run_number}.xml"
   cp "$xml_file" "$folder_name/$new_xml_name"
 
-  # Prepare and modify SH file
+  # Prepare and copy SH file
   new_sh_name="${sh_base}-run${current_run_number}.sh"
   sed \
     -e "s|^#SBATCH --job-name=.*|#SBATCH --job-name=${base_name}-run${current_run_number}|" \
-    -e "s|${xml_file}|${new_xml_name}|g" \
+    -e "s|${xml_file}|-overwrite ${new_xml_name}|g" \
     "$sh_file" > "$folder_name/$new_sh_name"
+
+ # Prepare and copy resume SH file
+  new_resume_sh_name="resume-${sh_base}-run${current_run_number}.sh"
+  sed \
+    -e "s|^#SBATCH --job-name=.*|#SBATCH --job-name=resume-${base_name}-run${current_run_number}|" \
+    -e "s|${xml_file}|-resume ${new_xml_name}|g" \
+    "$sh_file" > "$folder_name/$new_resume_sh_name"
 
   ((created_count++))
 done

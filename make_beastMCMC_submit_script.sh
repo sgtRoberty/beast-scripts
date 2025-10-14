@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------------------------
 # SCRIPT:      make_beastMCMC_submit_script.sh
 # AUTHOR:      Robert Haobo Yuan
-# DATE:        2025-10-10
+# DATE:        2025-10-14
 #
 # DESCRIPTION:
 # This script makes a SLURM submission script for a BEAST2 XML file in the current directory.
@@ -41,17 +41,3 @@ cat > "$submit_script" <<EOF
 EOF
 
 echo "Submit script created: $submit_script"
-
-# Write the resume script
-cat > "$resume_script" <<EOF
-#!/bin/bash
-#SBATCH --time=24:00:00
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=1G
-#SBATCH --job-name=resume-${base_name}
-#SBATCH --output=slurm-%x-%j.out
-
-~/BEAST2/beast/bin/beast -threads 1 -resume ${base_name}.xml
-EOF
-
-echo "Resume script created: $resume_script"
