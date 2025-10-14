@@ -9,7 +9,6 @@
 #
 # EXAMPLE:
 # ./make_pathsampling_jobs.sh cephalopods-strClkSpk.xml 1000000 100000 20 0.3 true 1000000 10
-#
 # --------------------------------------------------------------------------------------------------
 
 set -euo pipefail
@@ -49,12 +48,17 @@ XML_DIR="$(cd "$(dirname "$XML_FILE")" && pwd)"
 XML_BASENAME="$(basename "$XML_FILE")"
 XML_NAME_NOEXT="${XML_BASENAME%.*}"
 
-RUN_SCRIPTS=("run.sh" "resume.sh")
+TEMPLATE_SUBMIT="submit-${XML_NAME_NOEXT}.sh"
+
+if [ ! -f "$TEMPLATE_SUBMIT" ]; then
+  echo "❌ Error: Template submit script '$TEMPLATE_SUBMIT' not found in current directory."
+  exit 1
+fi
 
 echo "✅ Creating $NUM_REPLICATES replicates × $NUM_STEPS steps"
 echo "Base XML: $XML_FILE"
+echo "Using submit template: $TEMPLATE_SUBMIT"
 echo "Alpha: $ALPHA | Chain length: $CHAIN_LENGTH | Pre-burnin: $PRE_BURNIN | Log every: $LOG_EVERY"
-echo "Looking for run.sh and resume.sh in $XML_DIR..."
 
 # --- Outer loop: replicates ---
 for ((r=1; r<=NUM_REPLICATES; r++)); do
@@ -87,12 +91,12 @@ for ((r=1; r<=NUM_REPLICATES; r++)); do
 
     STEP_XML="${XML_NAME_NOEXT}-run${r}-step${i}.xml"
 
-    # Replace run line
+    # Replace <run ...> line in XML
     perl -pe "if (/^(\s*)<run[^>]*\\bspec=\"MCMC\"[^>]*>/) {
       \$_ = \$1 . qq{<run id=\"PathSamplingStep\" spec=\"modelselection.inference.PathSamplingStep\" chainLength=\"$CHAIN_LENGTH\" preBurnin=\"$PRE_BURNIN\" beta=\"$BETA\">} . \"\\n\"
     }" "$XML_FILE" > "$STEP_DIR/$STEP_XML"
 
-    # Insert logger
+    # Insert likelihood logger
     perl -e '
       use strict; use warnings;
       my ($file, $logEvery) = @ARGV;
@@ -118,29 +122,31 @@ END_LOG
       close $out;
     ' "$STEP_DIR/$STEP_XML" "$LOG_EVERY"
 
-    # Copy and edit run.sh / resume.sh
-    for script in "${RUN_SCRIPTS[@]}"; do
-      SRC="$XML_DIR/$script"
-      DST="$STEP_DIR/$script"
-      if [ -f "$SRC" ]; then
-        cp "$SRC" "$DST"
-        chmod +x "$DST" || true
+    # --- Create run.sh and resume.sh from template ---
+    for mode in run resume; do
+      DST="$STEP_DIR/${mode}.sh"
+      cp "$TEMPLATE_SUBMIT" "$DST"
+      chmod +x "$DST"
 
-        NEW_JOBNAME="${XML_NAME_NOEXT}-run${r}-step${i}"
-
-        # Replace SBATCH job name
-        perl -i -pe '
-          BEGIN { $new = shift; }
-          if (/^\s*#\s*SBATCH\b/ && /--job-name/) {
-            s/^(\s*#\s*SBATCH\s+--job-name)(?:=|\s+)\S+/\1=$new/;
-          }
-        ' "$NEW_JOBNAME" "$DST"
-
-        # Replace XML filename references inside scripts
-        perl -i -pe "
-          s/\b\Q${XML_BASENAME}\E\b/${STEP_XML}/g;
-        " "$DST"
+      if [[ "$mode" == "resume" ]]; then
+        JOBNAME="resume-${XML_NAME_NOEXT}-run${r}-step${i}"
+        XML_REF="-resume ${XML_NAME_NOEXT}-run${r}-step${i}.xml"
+      else
+        JOBNAME="${XML_NAME_NOEXT}-run${r}-step${i}"
+        XML_REF="${XML_NAME_NOEXT}-run${r}-step${i}.xml"
       fi
+
+      # Replace SBATCH job name
+      perl -i -pe "
+        if (/^\\s*#\\s*SBATCH\\b/ && /--job-name/) {
+          s|^\\s*#\\s*SBATCH\\s+--job-name\\S*|#SBATCH --job-name=${JOBNAME}|;
+        }
+      " "$DST"
+
+      # Replace XML file name references
+      perl -i -pe "
+        s/\\b\Q${XML_BASENAME}\E\\b/${XML_REF}/g;
+      " "$DST"
     done
 
     echo "  • run${r} step${i}: beta=${BETA}"

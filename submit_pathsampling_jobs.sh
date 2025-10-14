@@ -5,13 +5,16 @@
 # DATE:        2025-10-14
 #
 # DESCRIPTION:
-# This script submits SLURM jobs for BEAST2 path sampling / stepping-stone sampling.
-# You can choose whether to submit the "run.sh" or "resume.sh" scripts.
-# It allows filtering by run and step numbers.
+# Submits SLURM jobs for BEAST2 path-sampling/stepping-stone setups.
+# Supports two modes:
+#   --mode run       submits run.sh files
+#   --mode resume    submits resume.sh files
+#
+# Works with directory layout:
+#   ./<basename>-run1/tmp/step/step0/run.sh
 #
 # USAGE:
-# ./submit_pathsampling_jobs.sh [--mode run|resume] [--run N|N-N,N,...|all] [--step N|N-N,N,...|all]
-#
+#   ./submit_pathsampling_jobs.sh [--mode run|resume] [--run N|N-N,N,...|all] [--step N|N-N,N,...|all]
 # --------------------------------------------------------------------------------------------------
 
 # Defaults
@@ -19,17 +22,8 @@ run_arg="all"
 step_arg="all"
 mode="run"
 
-# Usage info
 print_usage() {
     echo "Usage: $0 [--mode run|resume] [--run N|N-N,N,...|all] [--step N|N-N,N,...|all]"
-    echo ""
-    echo "Options:"
-    echo "  --mode run       Submit 'run.sh' jobs (default)"
-    echo "  --mode resume    Submit 'resume.sh' jobs"
-    echo "  --run N          Submit jobs for specific runs (e.g., 1,3-5)"
-    echo "  --step N         Submit jobs for specific steps (e.g., 1,3-4)"
-    echo "  --run all        Submit across all runs (default)"
-    echo "  --step all       Submit across all steps (default)"
     echo ""
     echo "Examples:"
     echo "  $0 --mode run --run all --step all"
@@ -38,7 +32,6 @@ print_usage() {
     exit 1
 }
 
-# Expand list like 1,3-5 into array: 1 3 4 5
 expand_list() {
     local input=$1
     local result=()
@@ -55,7 +48,7 @@ expand_list() {
     echo "${result[@]}"
 }
 
-# Parse arguments
+# Parse args
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -75,19 +68,17 @@ while [[ $# -gt 0 ]]; do
             print_usage
             ;;
         *)
-            echo "Unknown argument: $1"
+            echo "❌ Unknown argument: $1"
             print_usage
             ;;
     esac
 done
 
-# Validate mode
 if [[ "$mode" != "run" && "$mode" != "resume" ]]; then
     echo "❌ Error: --mode must be 'run' or 'resume'"
     exit 1
 fi
 
-# Expand runs and steps if not 'all'
 if [[ "$run_arg" != "all" ]]; then
     run_list=($(expand_list "$run_arg"))
 fi
@@ -95,20 +86,21 @@ if [[ "$step_arg" != "all" ]]; then
     step_list=($(expand_list "$step_arg"))
 fi
 
-echo "Submitting $mode jobs with: run = $run_arg, step = $step_arg"
+echo "🔧 Submitting mode: $mode | runs: $run_arg | steps: $step_arg"
 echo ""
 
-# Main loop: find all matching run/resume scripts
-find . -type f -name "$mode.sh" | while read -r script; do
-    # Expect path like: ./cephalopods-strClkSpk-run1/tmp/step3/run.sh
-    if [[ "$script" =~ -run([0-9]+)/tmp/step([0-9]+)/$mode\.sh$ ]]; then
+submitted_count=0
+
+# ✅ Use process substitution instead of a pipe
+while read -r script; do
+    [[ -z "$script" ]] && continue
+
+    if [[ "$script" =~ -run([0-9]+)/tmp/step/step([0-9]+)/${mode}\.sh$ ]]; then
         run_num="${BASH_REMATCH[1]}"
         step_num="${BASH_REMATCH[2]}"
         script_dir=$(dirname "$script")
-        script_name=$(basename "$script")
         submit=false
 
-        # Determine whether to submit
         if [[ "$run_arg" == "all" && "$step_arg" == "all" ]]; then
             submit=true
         elif [[ "$run_arg" == "all" && " ${step_list[*]} " =~ " $step_num " ]]; then
@@ -121,10 +113,11 @@ find . -type f -name "$mode.sh" | while read -r script; do
 
         if $submit; then
             echo "→ Submitting ${mode}.sh for run${run_num}, step${step_num}"
-            (cd "$script_dir" && sbatch "$script_name")
+            (cd "$script_dir" && sbatch "${mode}.sh")
+            ((submitted_count++))
         fi
     fi
-done
+done < <(find . -type f -path "*/tmp/step/step*/${mode}.sh" | sort)
 
 echo ""
-echo "✅ Submission complete."
+echo "✅ Submission complete. Total jobs submitted: $submitted_count"
