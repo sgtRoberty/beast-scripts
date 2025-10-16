@@ -1,4 +1,17 @@
 #!/bin/bash
+# --------------------------------------------------------------------------------------------------
+# SCRIPT:      report_pathsampling_chainlengths.sh
+# AUTHOR:      Robert Haobo Yuan
+# DATE:        2025-10-16
+#
+# DESCRIPTION:
+# This script reports the chainLength values for PathSamplingStep elements in BEAST2 XML files located in step directories.
+# It can filter by specific run and step numbers, and optionally update the chainLength to a new value.
+#
+# USAGE:
+# ./report_pathsampling_chainlengths.sh [--run N|all] [--step M|all] [--set <new_chainLength>]
+#
+# --------------------------------------------------------------------------------------------------
 
 # Default arguments
 run_arg="all"
@@ -56,12 +69,13 @@ fi
 echo "Filtering by: run = $run_arg, step = $step_arg"
 echo
 
-# Process each beast.xml
-find . -type f -path "*/tmp/step/step*/beast.xml" | while read -r xmlfile; do
-    # Extract run and step numbers from path
-    if [[ "$xmlfile" =~ -run([0-9]+)/tmp/step/step([0-9]+)/beast\.xml$ ]]; then
+# Process each step XML file
+find . -type f -path "*/tmp/step/step*/*-run*-step*.xml" | while read -r xmlfile; do
+    # Extract run and step numbers from the path or filename
+    if [[ "$xmlfile" =~ -run([0-9]+)/tmp/step/step([0-9]+)/[^/]+-run[0-9]+-step[0-9]+\.xml$ ]]; then
         run_num="${BASH_REMATCH[1]}"
         step_num="${BASH_REMATCH[2]}"
+        echo "Found: run=$run_num, step=$step_num → $xmlfile"
     else
         echo "Skipping (unrecognized path): $xmlfile"
         continue
