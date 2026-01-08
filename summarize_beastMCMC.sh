@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------------------------
 # SCRIPT:      summarize_beastMCMC.sh
 # AUTHOR:      Robert Haobo Yuan
-# DATE:        2025-10-10
+# DATE:        2026-01-08
 #
 # DESCRIPTION:
 # This script summarizes and combines BEAST2 MCMC outputs from multiple replicate runs.
@@ -137,13 +137,22 @@ logcombiner "${trees_files[@]}" -o "${filename}.trees" -b "$burnin" $resample_ar
 # ----------------------------
 # Convert and summarize trees
 # ----------------------------
+echo "Summarzing SA trees (mean)..."
+treeannotator -height mean -burnin 0 -topology MCC -file "${filename}.trees" "${filename}-mcc-mean.tre"
+
+echo "Summarzing SA trees (median)..."
+treeannotator -height median -burnin 0 -topology MCC -file "${filename}.trees" "${filename}-mcc-median.tre"
+
+echo "Printing SA frequencies..."
+applauncher SampledAncestorTreeAnalyser -file "${filename}.trees" > "${filename}-sa-frequencies.txt"
+
 echo "Converting to extant trees..."
 applauncher FullToExtantTreeConverter -trees "${filename}.trees" -output "${filename}-extant.trees"
 
-echo "Running treeannotator (CA)..."
+echo "Summarizing extant trees (CA)..."
 treeannotator -height CA -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map-CA.tre"
 
-echo "Running treeannotator (median)..."
-treeannotator -height median -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map.tre"
+echo "Summarizing extant trees (median)..."
+treeannotator -height median -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map-median.tre"
 
 echo "✅ All steps complete. See README.txt for log."
