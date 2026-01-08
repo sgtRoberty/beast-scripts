@@ -2,13 +2,19 @@
 # --------------------------------------------------------------------------------------------------
 # SCRIPT:      summarize_beastMCMC.sh
 # AUTHOR:      Robert Haobo Yuan
+<<<<<<< HEAD
 # DATE:        2026-01-08
+=======
+# DATE:        2025-11-16
+>>>>>>> 6a62a96f16c99fd463488ef381d74d5d6f5d518e
 #
 # DESCRIPTION:
 # This script summarizes and combines BEAST2 MCMC outputs from multiple replicate runs.
 #
 # USAGE:
-# ./summarize_beastMCMC.sh --burnin <value> [--resample <freq>] [--runs <ranges>]
+# ./summarize_beastMCMC.sh --burnin <value> [--resample <freq>] [--runs <ranges>] [--ignore-trees]
+# EAXMPLE:
+# ./summarize_beastMCMC.sh --burnin 10
 #
 # --------------------------------------------------------------------------------------------------
 
@@ -18,12 +24,14 @@
 burnin=""
 resample=""
 runs_raw=""
+ignore_trees=false
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --burnin) burnin="$2"; shift ;;
         --resample) resample="$2"; shift ;;
         --runs) runs_raw="$2"; shift ;;
+        --ignore-trees) ignore_trees=true ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -31,7 +39,7 @@ done
 
 if [ -z "$burnin" ]; then
   echo "Error: --burnin is required."
-  echo "Usage: summarize_beastMCMC.sh --burnin <value> [--resample <freq>] [--runs <ranges>]"
+  echo "Usage: summarize_beastMCMC.sh --burnin <value> [--resample <freq>] [--runs <ranges>] [--ignore-trees]"
   exit 1
 fi
 
@@ -90,6 +98,7 @@ echo "Filename base: $filename"
 echo "Combining runs: $sorted_runs_csv"
 echo "Using burn-in: $burnin"
 [ -n "$resample" ] && echo "Using resample frequency: $resample"
+$ignore_trees && echo "Ignoring trees files!"
 echo "Output directory: $output_dir"
 
 # ----------------------------
@@ -108,20 +117,22 @@ for run in "${sorted_runs_array[@]}"; do
         echo "Warning: Missing $log_file"
     fi
 
-    if [[ -f "$trees_file" ]]; then
-        trees_files+=("-log ../$trees_file")
-    else
-        echo "Warning: Missing $trees_file"
+    if ! $ignore_trees; then
+        if [[ -f "$trees_file" ]]; then
+            trees_files+=("-log ../$trees_file")
+        else
+            echo "Warning: Missing $trees_file"
+        fi
     fi
 done
 
-if [ ${#log_files[@]} -eq 0 ] || [ ${#trees_files[@]} -eq 0 ]; then
-  echo "Error: No log or trees files found. Exiting."
+if [ ${#log_files[@]} -eq 0 ]; then
+  echo "Error: No log files found. Exiting."
   exit 1
 fi
 
 # ----------------------------
-# Combine log and tree files
+# Combine log files
 # ----------------------------
 cd "$output_dir" || exit 1
 
@@ -131,28 +142,36 @@ resample_arg=""
 echo "Running logcombiner on log files..."
 logcombiner "${log_files[@]}" -o "${filename}.log" -b "$burnin" $resample_arg
 
-echo "Running logcombiner on trees files..."
-logcombiner "${trees_files[@]}" -o "${filename}.trees" -b "$burnin" $resample_arg
-
 # ----------------------------
-# Convert and summarize trees
+# Optionally combine and summarize trees
 # ----------------------------
-echo "Summarzing SA trees (mean)..."
-treeannotator -height mean -burnin 0 -topology MCC -file "${filename}.trees" "${filename}-mcc-mean.tre"
+if ! $ignore_trees; then
+    if [ ${#trees_files[@]} -eq 0 ]; then
+        echo "Warning: No trees files found; skipping tree summarization."
+    else
+        echo "Running logcombiner on trees files..."
+        logcombiner "${trees_files[@]}" -o "${filename}.trees" -b "$burnin" $resample_arg
 
-echo "Summarzing SA trees (median)..."
-treeannotator -height median -burnin 0 -topology MCC -file "${filename}.trees" "${filename}-mcc-median.tre"
+        echo "Summarzing SA trees (mean)..."
+        treeannotator -height mean -burnin 0 -topology MCC -file "${filename}.trees" "${filename}-mcc-mean.tre"
 
-echo "Printing SA frequencies..."
-applauncher SampledAncestorTreeAnalyser -file "${filename}.trees" > "${filename}-sa-frequencies.txt"
+        echo "Summarzing SA trees (median)..."
+        treeannotator -height median -burnin 0 -topology MCC -file "${filename}.trees" "${filename}-mcc-median.tre"
 
-echo "Converting to extant trees..."
-applauncher FullToExtantTreeConverter -trees "${filename}.trees" -output "${filename}-extant.trees"
+        echo "Printing SA frequencies..."
+        applauncher SampledAncestorTreeAnalyser -file "${filename}.trees" > "${filename}-sa-frequencies.txt"
 
-echo "Summarizing extant trees (CA)..."
-treeannotator -height CA -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map-CA.tre"
+        echo "Converting to extant trees..."
+        applauncher FullToExtantTreeConverter -trees "${filename}.trees" -output "${filename}-extant.trees"
 
-echo "Summarizing extant trees (median)..."
-treeannotator -height median -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map-median.tre"
+        echo "Summarizing extant trees (CA)..."
+        treeannotator -height CA -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map-CA.tre"
+
+        echo "Summarizing extant trees (median)..."
+        treeannotator -height median -burnin 0 -topology CCD0 -file "${filename}-extant.trees" "${filename}-extant-ccd0map-median.tre"
+    fi
+else
+    echo "Skipping all tree processing due to --ignore-trees"
+fi
 
 echo "✅ All steps complete. See README.txt for log."
