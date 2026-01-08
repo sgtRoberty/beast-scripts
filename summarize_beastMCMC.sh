@@ -2,11 +2,7 @@
 # --------------------------------------------------------------------------------------------------
 # SCRIPT:      summarize_beastMCMC.sh
 # AUTHOR:      Robert Haobo Yuan
-<<<<<<< HEAD
 # DATE:        2026-01-08
-=======
-# DATE:        2025-11-16
->>>>>>> 6a62a96f16c99fd463488ef381d74d5d6f5d518e
 #
 # DESCRIPTION:
 # This script summarizes and combines BEAST2 MCMC outputs from multiple replicate runs.
